@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Control+</title>
+<style>
+  html,body{margin:0;height:100%;background:#F3F5F8;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  iframe{position:fixed;inset:0;width:100%;height:100%;border:0;display:block}
+  #capa{position:fixed;inset:0;z-index:2;background:#1F4E78;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;transition:opacity .3s}
+  #capa.some{opacity:0;pointer-events:none}
+  #capa b{font-size:26px;letter-spacing:-.3px}#capa b i{color:#7BD389;font-style:normal}
+  #capa p{margin:0;opacity:.85;font-size:15px}
+  #capa button{display:none;height:46px;padding:0 22px;border:0;border-radius:12px;background:#fff;color:#1F4E78;font-weight:800;font-size:15px}
+  .giro{width:28px;height:28px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:g 1s linear infinite}
+  @keyframes g{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div id="capa">
+  <svg width="64" height="64" viewBox="0 0 40 40" aria-hidden="true"><rect width="40" height="40" rx="11" fill="#fff" fill-opacity=".14"/><path d="M24.5 13.2A9 9 0 1 0 24.5 26.8" stroke="#fff" stroke-width="4.2" fill="none" stroke-linecap="round"/><circle cx="29.5" cy="20" r="6.6" fill="#2E7D32"/><path d="M29.5 16.8v6.4M26.3 20h6.4" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/></svg>
+  <b>Control<i>+</i></b>
+  <div class="giro" id="giro"></div>
+  <p id="msg">Carregando…</p>
+  <button id="tentar" onclick="abrir()">Tentar de novo</button>
+</div>
+<iframe id="app" title="Control+" allow="clipboard-write"></iframe>
+<script>
+  var URL_APP = '__APP_URL__';
+  var capa = document.getElementById('capa'), msg = document.getElementById('msg'), giro = document.getElementById('giro'), tentar = document.getElementById('tentar'), app = document.getElementById('app');
+  function semInternet(){ capa.classList.remove('some'); giro.style.display='none'; tentar.style.display='block'; msg.textContent='Sem conexão com a internet.'; }
+  function abrir(){
+    if (!navigator.onLine) { semInternet(); return; }
+    giro.style.display='block'; tentar.style.display='none'; msg.textContent='Carregando…';
+    app.onload = function(){ setTimeout(function(){ capa.classList.add('some'); }, 400); };
+    app.src = URL_APP;
+  }
+  window.addEventListener('offline', semInternet);
+  abrir();
+</script>
+</body>
+</html>
