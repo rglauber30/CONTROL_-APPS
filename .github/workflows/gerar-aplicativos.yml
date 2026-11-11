@@ -1,0 +1,94 @@
+name: Gerar aplicativos (APK e EXE)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    name: APK (Android)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Conferir o link do app
+        run: |
+          URL=$(tr -d ' \r\n' < config/app-url.txt)
+          case "$URL" in
+            https://script.google.com/macros/s/*/exec) echo "Link OK" ;;
+            *) echo "::error::Coloque em config/app-url.txt o link do Control+ (começa com https://script.google.com/macros/s/ e termina em /exec)"; exit 1 ;;
+          esac
+          mkdir -p android/app/src/main/assets
+          sed "s#__APP_URL__#$URL#g" shared/index.html > android/app/src/main/assets/index.html
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Gerar APK
+        working-directory: android
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - run: mv android/app/build/outputs/apk/release/app-release.apk ControlPlus.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ControlPlus-Android
+          path: ControlPlus.apk
+
+  windows:
+    name: EXE (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Conferir o link do app
+        shell: pwsh
+        run: |
+          $url = (Get-Content config/app-url.txt -Raw).Trim()
+          if ($url -notmatch '^https://script\.google\.com/macros/s/.+/exec$') { Write-Error "Coloque em config/app-url.txt o link do Control+ (termina em /exec)"; exit 1 }
+          (Get-Content shared/index.html -Raw).Replace('__APP_URL__', $url) | Set-Content windows/index.html -Encoding utf8
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Gerar EXE
+        run: dotnet publish windows/ControlPlus.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true -o saida
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ControlPlus-Windows
+          path: saida/ControlPlus.exe
+
+  publicar:
+    name: Publicar versão para download
+    needs: [ android, windows ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: arquivos
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v4.0.${{ github.run_number }}
+          name: Control+ 4.0.${{ github.run_number }}
+          body: |
+            **Control+** para Android e Windows.
+            - Android: baixe **ControlPlus.apk** no celular e instale (autorize "instalar apps desconhecidos").
+            - Windows: baixe **ControlPlus.exe** e abra (na primeira vez: "Mais informações → Executar assim mesmo").
+          files: |
+            arquivos/ControlPlus.apk
+            arquivos/ControlPlus.exe
